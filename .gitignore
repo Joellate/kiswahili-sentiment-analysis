@@ -1,0 +1,19 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# downloaded data cache (re-created by src/data.py)
+data/*.csv
+
+# large model weights (published to the Hugging Face Hub instead)
+models/*
+!models/.gitkeep
+!models/baseline_tfidf_lr.joblib
+
+# fastText vectors (downloaded by notebook 03)
+data/*.gz
+
+# Trainer checkpoints
+checkpoints/
