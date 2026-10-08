@@ -2,7 +2,8 @@
 
 This is the interface for the fine-tuned Kiswahili sentiment model.
 
-**Live app:** https://kiswahili-sentiment.streamlit.app/ Full project: https://github.com/Joellate/kiswahili-sentiment-analysis
+- **Live app:** https://kiswahili-sentiment.streamlit.app/
+- **Full project:** https://github.com/Joellate/kiswahili-sentiment-analysis
 
 | File | Purpose |
 |---|---|
