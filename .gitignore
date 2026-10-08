@@ -20,3 +20,6 @@ checkpoints/
 
 # Office lock files
 ~$*
+
+# personal notes (not part of the submission)
+video_script.md
