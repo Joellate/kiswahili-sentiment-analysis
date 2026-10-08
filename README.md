@@ -7,7 +7,8 @@ Given a tweet written in **Kiswahili**, the system predicts whether its sentimen
 | | Link |
 |---|---|
 | GitHub repository | https://github.com/Joellate/kiswahili-sentiment-analysis |
-| Live demo | _TODO (Hugging Face Space)_ |
+| Live demo | https://huggingface.co/spaces/RubaxTyra/kiswahili-sentiment-demo _(deploying)_ |
+| Fine-tuned model | https://huggingface.co/RubaxTyra/kiswahili-sentiment |
 | Demo video | _TODO_ |
 | Report (PDF) | _TODO_ |
 
@@ -60,6 +61,7 @@ notebooks/
   03_bilstm.ipynb
   04_transformer_finetune.ipynb   # needs a GPU (Colab T4)
   05_error_analysis.ipynb         # bootstrap significance, confusions, OOV analysis, manual error sample
+  06_deploy_app.ipynb             # (re)deploy the web app to Hugging Face Spaces
 app/
   app.py             # Gradio web app (loads the fine-tuned model from the Hugging Face Hub)
 results/
@@ -69,7 +71,7 @@ results/
   figures/
 ```
 
-## Results so far (test set)
+## Results (test set)
 
 Neural models are reported as mean ± std over 3 seeds.
 
@@ -85,12 +87,23 @@ Neural models are reported as mean ± std over 3 seeds.
 | L3 BiLSTM, fastText fine-tuned | 0.444 | 0.446 ± 0.008 | 0.545 | 0.277 |
 | L4 BiLSTM, fastText + attention | 0.435 | 0.455 ± 0.010 | 0.537 | 0.308 |
 | L5 L3 without class weighting | 0.436 | 0.426 ± 0.018 | 0.537 | 0.220 |
-| T1–T7 Transformers | _run notebook 04 on Colab_ | | | |
+| T1 mBERT | 0.431 | 0.432 ± 0.020 | 0.512 | 0.264 |
+| T2 XLM-R base | 0.371 | 0.388 ± 0.149 | 0.448 | 0.292 |
+| T3 AfriBERTa large | 0.528 | 0.556 ± 0.013 | 0.582 | 0.521 |
+| T4 AfroXLMR base | 0.527 | 0.554 ± 0.009 | 0.581 | 0.525 |
+| **T5 AfriBERTa large, no class weighting** | **0.538** | **0.566 ± 0.005** | **0.606** | **0.526** |
+| T6 AfriBERTa large, frozen encoder | 0.525 | 0.537 ± 0.007 | 0.557 | 0.505 |
 
-Findings so far:
-- **Class weighting** is essential for the rare negative class.
-- **The BiLSTM does not beat TF-IDF** on 1.8k tweets: it overfits within about 4 epochs. A paired bootstrap shows the two are statistically tied.
-- **fastText embeddings** give a small gain and much more stable training.
+**Deployed model:** the best T5 run (seed 42), with test macro-F1 **0.568** and accuracy 0.623.
+
+![All experiments](results/figures/all_experiments.png)
+
+Main findings:
+- **Africa-centric pretraining is decisive.** AfriBERTa and AfroXLMR beat the best TF-IDF and BiLSTM models by about 0.07–0.10 macro-F1, and raise negative-class F1 from about 0.31 to about 0.52. The paired-bootstrap 95% CI for the gain is [+0.065, +0.161].
+- **General multilingual models don't help.** mBERT and XLM-R score below the TF-IDF baseline. AfroXLMR is XLM-R with extra African-language pretraining and the same tokenizer, and it gains +0.17.
+- **The BiLSTM does not beat TF-IDF** on 1.8k tweets. It overfits within about 4 epochs, and a bootstrap shows the two are statistically tied. fastText embeddings give a small gain and more stable training.
+- **Class weighting** is essential for the linear models (+0.08 macro-F1) but makes no difference for fine-tuned Transformers.
+- **Remaining errors are about neutrality.** 97% of the best model's errors involve the neutral class, and positive ↔ negative flips are rare.
 
 The full table is in `results/experiments.csv`.
 
@@ -102,7 +115,7 @@ Notebook 04 needs two extra steps:
 1. Switch to a GPU runtime first: *Runtime → Change runtime type → T4 GPU*.
 2. When it asks, paste a Hugging Face **write** token (create one at https://huggingface.co/settings/tokens).
 
-At the end it uploads the model, the results and the web app to Hugging Face automatically.
+At the end it uploads the model, the results and the web app to Hugging Face automatically. Notebook 06 redeploys only the web app (CPU is enough).
 
 | Notebook | |
 |---|---|
@@ -110,6 +123,8 @@ At the end it uploads the model, the results and the web app to Hugging Face aut
 | 02 Baselines | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Joellate/kiswahili-sentiment-analysis/blob/main/notebooks/02_baselines_tfidf.ipynb) |
 | 03 BiLSTM | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Joellate/kiswahili-sentiment-analysis/blob/main/notebooks/03_bilstm.ipynb) |
 | 04 Transformers | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Joellate/kiswahili-sentiment-analysis/blob/main/notebooks/04_transformer_finetune.ipynb) |
+| 05 Error analysis | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Joellate/kiswahili-sentiment-analysis/blob/main/notebooks/05_error_analysis.ipynb) |
+| 06 Deploy web app | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Joellate/kiswahili-sentiment-analysis/blob/main/notebooks/06_deploy_app.ipynb) |
 
 **Locally**
 ```bash
@@ -125,9 +140,12 @@ The data downloads automatically from Hugging Face on the first run, and noteboo
 - Bahdanau, D., Cho, K., & Bengio, Y. (2015). Neural Machine Translation by Jointly Learning to Align and Translate. *ICLR 2015*.
 - Conneau, A., et al. (2020). Unsupervised Cross-lingual Representation Learning at Scale. *ACL 2020*.
 - Devlin, J., Chang, M.-W., Lee, K., & Toutanova, K. (2019). BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding. *NAACL 2019*.
+- Dror, R., Baumer, G., Shlomov, S., & Reichart, R. (2018). The Hitchhiker's Guide to Testing Statistical Significance in Natural Language Processing. *ACL 2018*.
 - Grave, E., Bojanowski, P., Gupta, P., Joulin, A., & Mikolov, T. (2018). Learning Word Vectors for 157 Languages. *LREC 2018*.
 - Hochreiter, S., & Schmidhuber, J. (1997). Long Short-Term Memory. *Neural Computation, 9*(8).
 - Jain, S., & Wallace, B. C. (2019). Attention is not Explanation. *NAACL 2019*.
+- Koehn, P. (2004). Statistical Significance Tests for Machine Translation Evaluation. *EMNLP 2004*.
+- Mosbach, M., Andriushchenko, M., & Klakow, D. (2021). On the Stability of Fine-tuning BERT: Misconceptions, Explanations, and Strong Baselines. *ICLR 2021*.
 - Muhammad, S. H., et al. (2023). AfriSenti: A Twitter Sentiment Analysis Benchmark for African Languages. *EMNLP 2023*.
 - Muhammad, S. H., et al. (2023). SemEval-2023 Task 12: Sentiment Analysis for African Languages (AfriSenti-SemEval). *SemEval 2023*.
 - Ogueji, K., Zhu, Y., & Lin, J. (2021). Small Data? No Problem! Exploring the Viability of Pretrained Multilingual Language Models for Low-resourced Languages. *MRL Workshop 2021*.

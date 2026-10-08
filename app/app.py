@@ -22,7 +22,7 @@ HERE = Path(__file__).resolve().parent
 sys.path[:0] = [str(HERE), str(HERE.parent / "src")]
 from preprocessing import clean_text  # noqa: E402
 
-MODEL_ID = os.environ.get("MODEL_ID", "Joellate/kiswahili-sentiment")
+MODEL_ID = os.environ.get("MODEL_ID", "RubaxTyra/kiswahili-sentiment")
 LOCAL_MODEL = HERE.parent / "models" / "best_transformer"
 model_path = str(LOCAL_MODEL) if LOCAL_MODEL.exists() else MODEL_ID
 
