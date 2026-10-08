@@ -17,3 +17,6 @@ data/*.gz
 
 # Trainer checkpoints
 checkpoints/
+
+# Office lock files
+~$*
