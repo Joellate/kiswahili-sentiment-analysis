@@ -1,31 +1,41 @@
----
-title: Kiswahili Sentiment
-emoji: 💬
-colorFrom: green
-colorTo: blue
-sdk: gradio
-app_file: app.py
-pinned: false
-license: cc-by-4.0
----
+# Web app
 
-# Kiswahili Tweet Sentiment: web app
+This is the interface for the fine-tuned Kiswahili sentiment model. Full project: https://github.com/Joellate/kiswahili-sentiment-analysis
 
-This is a Gradio interface for the fine-tuned Kiswahili sentiment model. Full project: https://github.com/Joellate/kiswahili-sentiment-analysis
+| File | Purpose |
+|---|---|
+| `predict.py` | Loads the model and makes predictions. Shared by both apps. |
+| `streamlit_app.py` | **Deployed app** (Streamlit Community Cloud) |
+| `app.py` | Gradio version of the same app, for local use |
+| `requirements.txt` | Dependencies of the deployed Streamlit app (CPU-only PyTorch) |
+| `requirements-gradio.txt` | Dependencies of the Gradio version |
 
-## How it connects to the model
+## How the app connects to the model
 
-1. `notebooks/04_transformer_finetune.ipynb` fine-tunes the model and uploads it to the Hugging Face Hub as `Joellate/kiswahili-sentiment`.
-2. When this app starts, it downloads that model with `AutoModelForSequenceClassification.from_pretrained`. You can override the model with the `MODEL_ID` environment variable. If `models/best_transformer/` exists locally, the app uses that folder instead.
-3. Each input is cleaned the same way as the training data (`preprocessing.py`), tokenised, and passed through the model. The softmax probabilities for the three classes are shown.
+1. `notebooks/04_transformer_finetune.ipynb` fine-tunes the model and uploads it to the Hugging Face Hub as `RubaxTyra/kiswahili-sentiment`.
+2. On start-up, `predict.load_model()` downloads it with `AutoTokenizer` / `AutoModelForSequenceClassification.from_pretrained`. It uses `models/best_transformer/` instead if that folder exists locally, and the `MODEL_ID` environment variable overrides the model id. Streamlit caches the loaded model (`st.cache_resource`), so it is downloaded only once.
+3. Each input is cleaned exactly like the training data (`src/preprocessing.py`, plus removal of @mentions, hashtags, emojis and punctuation), tokenised, and passed through the model. The softmax probabilities for positive / neutral / negative are displayed.
 
 ## Run locally
 
 ```bash
 pip install -r app/requirements.txt
+streamlit run app/streamlit_app.py
+```
+
+Or the Gradio version:
+
+```bash
+pip install -r app/requirements-gradio.txt
 python app/app.py
 ```
 
-## Deploy to Hugging Face Spaces
+## Deploy on Streamlit Community Cloud (free)
 
-Section 8 of `notebooks/04_transformer_finetune.ipynb` deploys this automatically. It creates the Space `<user>/kiswahili-sentiment-demo` (SDK: Gradio), uploads `app.py`, `requirements.txt`, this `README.md` and `src/preprocessing.py`, and sets `MODEL_ID` to the uploaded model.
+1. Go to https://share.streamlit.io and sign in with GitHub.
+2. Click **Create app**, then **Deploy a public app from GitHub**.
+3. Set the repository to `Joellate/kiswahili-sentiment-analysis`, the branch to `main`, and the main file path to `app/streamlit_app.py`.
+4. Optional: set the app URL to `kiswahili-sentiment`.
+5. Click **Deploy**. The first build takes about 5 minutes.
+
+Hugging Face Spaces was the original target. Gradio Spaces now require a paid PRO account (the API returns HTTP 402), so the app is deployed on Streamlit instead. The model itself stays free on the Hugging Face Hub.

@@ -7,7 +7,7 @@ Given a tweet written in **Kiswahili**, the system predicts whether its sentimen
 | | Link |
 |---|---|
 | GitHub repository | https://github.com/Joellate/kiswahili-sentiment-analysis |
-| Live demo | https://huggingface.co/spaces/RubaxTyra/kiswahili-sentiment-demo _(deploying)_ |
+| Live demo (Streamlit) | _TODO: link after deploying on Streamlit Community Cloud_ |
 | Fine-tuned model | https://huggingface.co/RubaxTyra/kiswahili-sentiment |
 | Demo video | _TODO_ |
 | Report (PDF) | _TODO_ |
@@ -61,9 +61,11 @@ notebooks/
   03_bilstm.ipynb
   04_transformer_finetune.ipynb   # needs a GPU (Colab T4)
   05_error_analysis.ipynb         # bootstrap significance, confusions, OOV analysis, manual error sample
-  06_deploy_app.ipynb             # (re)deploy the web app to Hugging Face Spaces
+  06_update_model_card.ipynb      # corrects the model card on the Hugging Face Hub
 app/
-  app.py             # Gradio web app (loads the fine-tuned model from the Hugging Face Hub)
+  streamlit_app.py   # deployed web app (Streamlit Community Cloud)
+  predict.py         # model loading + prediction (downloads the fine-tuned model from the HF Hub)
+  app.py             # Gradio version of the same app, for local use
 results/
   experiments.csv    # every experiment's metrics (validation + test)
   predictions_*.csv  # per-tweet test predictions used in error analysis
@@ -115,7 +117,7 @@ Notebook 04 needs two extra steps:
 1. Switch to a GPU runtime first: *Runtime → Change runtime type → T4 GPU*.
 2. When it asks, paste a Hugging Face **write** token (create one at https://huggingface.co/settings/tokens).
 
-At the end it uploads the model, the results and the web app to Hugging Face automatically. Notebook 06 redeploys only the web app (CPU is enough).
+At the end it uploads the model and the results to Hugging Face automatically.
 
 | Notebook | |
 |---|---|
@@ -124,7 +126,7 @@ At the end it uploads the model, the results and the web app to Hugging Face aut
 | 03 BiLSTM | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Joellate/kiswahili-sentiment-analysis/blob/main/notebooks/03_bilstm.ipynb) |
 | 04 Transformers | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Joellate/kiswahili-sentiment-analysis/blob/main/notebooks/04_transformer_finetune.ipynb) |
 | 05 Error analysis | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Joellate/kiswahili-sentiment-analysis/blob/main/notebooks/05_error_analysis.ipynb) |
-| 06 Deploy web app | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Joellate/kiswahili-sentiment-analysis/blob/main/notebooks/06_deploy_app.ipynb) |
+| 06 Update model card | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Joellate/kiswahili-sentiment-analysis/blob/main/notebooks/06_update_model_card.ipynb) |
 
 **Locally**
 ```bash
@@ -133,6 +135,14 @@ jupyter notebook notebooks/
 ```
 
 The data downloads automatically from Hugging Face on the first run, and notebook 03 downloads the fastText vectors (~230 MB).
+
+**Web app**
+```bash
+pip install -r app/requirements.txt
+streamlit run app/streamlit_app.py
+```
+
+The app downloads the fine-tuned model from https://huggingface.co/RubaxTyra/kiswahili-sentiment. Deployment steps for Streamlit Community Cloud are in [app/README.md](app/README.md).
 
 ## References
 
