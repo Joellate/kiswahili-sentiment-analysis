@@ -7,7 +7,7 @@ Given a tweet written in **Kiswahili**, the system predicts whether its sentimen
 | | Link |
 |---|---|
 | GitHub repository | https://github.com/Joellate/kiswahili-sentiment-analysis |
-| Live demo (Streamlit) | _TODO: link after deploying on Streamlit Community Cloud_ |
+| Live demo (Streamlit) | https://kiswahili-sentiment.streamlit.app/ |
 | Fine-tuned model | https://huggingface.co/RubaxTyra/kiswahili-sentiment |
 | Demo video | _TODO_ |
 | Report (PDF) | _TODO_ |
