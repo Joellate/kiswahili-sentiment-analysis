@@ -10,7 +10,7 @@ Given a tweet written in **Kiswahili**, the system predicts whether its sentimen
 | Live demo (Streamlit) | https://kiswahili-sentiment.streamlit.app/ |
 | Fine-tuned model | https://huggingface.co/RubaxTyra/kiswahili-sentiment |
 | Demo video | _TODO_ |
-| Report (PDF) | _TODO_ |
+| Report (PDF) | [report/report.pdf](report/report.pdf) (source: [report/report.html](report/report.html)) |
 
 ## Problem
 

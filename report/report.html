@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kiswahili Tweet Sentiment Classification</title>
+<style>
+  @page { size: A4; margin: 2.2cm 2.2cm 2.4cm 2.2cm; }
+  :root { --ink: #1a1a1a; --muted: #555; --rule: #bbb; --accent: #1f4e79; }
+  body { font-family: "Cambria", "Georgia", "Times New Roman", serif; font-size: 10.5pt; line-height: 1.38;
+         color: var(--ink); background: #fff; max-width: 17cm; margin: 0 auto; padding: 0 0.5cm; }
+  h1 { font-size: 18pt; text-align: center; margin: 0.2em 0 0.3em; line-height: 1.25; }
+  .subtitle { text-align: center; color: var(--muted); margin: 0 0 1em; }
+  h2 { font-size: 13.5pt; color: var(--accent); margin: 1.4em 0 0.4em; border-bottom: 1px solid var(--rule); padding-bottom: 2px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin: 1.1em 0 0.3em; page-break-after: avoid; }
+  p { margin: 0.45em 0; text-align: justify; hyphens: auto; }
+  .links { border: 1px solid var(--rule); border-radius: 4px; padding: 0.6em 0.9em; margin: 0.8em 0 1.2em; font-size: 10.5pt; }
+  .links table { border: none; margin: 0; width: 100%; }
+  .links td { border: none; padding: 2px 6px; }
+  .abstract { margin: 0 1.2cm 1.2em; font-size: 10.5pt; }
+  .abstract p { text-align: justify; }
+  table { border-collapse: collapse; margin: 0.6em auto; font-size: 9pt; }
+  tr, figure { page-break-inside: avoid; }
+  th, td { border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 3px 7px; text-align: left; vertical-align: top; }
+  thead th { border-top: 2px solid var(--ink); border-bottom: 1.5px solid var(--ink); }
+  tbody tr:last-child td { border-bottom: 2px solid var(--ink); }
+  td.n, th.n { text-align: right; white-space: nowrap; }
+  tr.best td { font-weight: bold; }
+  tr.group td { background: #f2f2f2; font-style: italic; }
+  .caption { font-size: 9.5pt; color: var(--muted); text-align: center; margin: 0.2em 0 1em; }
+  figure { margin: 0.8em 0; text-align: center; page-break-inside: avoid; }
+  figure img { max-width: 100%; }
+  figure.half img { max-width: 52%; }
+  figcaption { font-size: 9.5pt; color: var(--muted); margin-top: 0.3em; }
+  code { font-family: "Consolas", monospace; font-size: 9.5pt; }
+  ol, ul { margin: 0.3em 0 0.5em 1.2em; padding-left: 0.6em; }
+  li { margin: 0.15em 0; }
+  .refs p { padding-left: 2em; text-indent: -2em; text-align: left; font-size: 10pt; margin: 0.25em 0; }
+  .sw { font-style: italic; }
+  a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<h1>Sentiment Classification of Kiswahili Tweets:<br>Comparing Linear, Recurrent and Africa-Centric Transformer Models on AfriSenti</h1>
+<p class="subtitle">Teta Joella · NLP Summative Project: Text Classification for an African Language · October 2026</p>
+
+<div class="links">
+<table>
+<tr><td><b>GitHub Repository</b></td><td><a href="https://github.com/Joellate/kiswahili-sentiment-analysis">https://github.com/Joellate/kiswahili-sentiment-analysis</a></td></tr>
+<tr><td><b>Live System</b></td><td><a href="https://kiswahili-sentiment.streamlit.app/">https://kiswahili-sentiment.streamlit.app/</a></td></tr>
+<tr><td><b>Demo Video</b></td><td>[link to be added]</td></tr>
+<tr><td><b>Fine-tuned Model</b></td><td><a href="https://huggingface.co/RubaxTyra/kiswahili-sentiment">https://huggingface.co/RubaxTyra/kiswahili-sentiment</a></td></tr>
+</table>
+</div>
+
+<h2>1. Abstract</h2>
+<div class="abstract">
+<p>Kiswahili is one of the three most widely spoken languages in Africa, yet sentiment analysis tools are overwhelmingly built for English. This project develops and deploys a three-way (positive / neutral / negative) sentiment classifier for Kiswahili tweets, using the Kiswahili subset of the AfriSenti benchmark: 3,011 tweets annotated by native speakers. I compare four model families under a shared evaluation protocol (macro-F1, three random seeds for neural models):</p>
+<ul>
+<li>a majority-class floor</li>
+<li>TF-IDF with linear classifiers</li>
+<li>a BiLSTM with random or fastText embeddings</li>
+<li>four fine-tuned Transformer encoders: mBERT, XLM-R, AfriBERTa and AfroXLMR</li>
+</ul>
+<p>The best TF-IDF model reaches 0.486 macro-F1 and the BiLSTM does not improve on it (0.455). Africa-centric Transformers clearly do: AfriBERTa-large reaches 0.566 ± 0.005 and raises F1 on the rare negative class from about 0.31 to 0.53. A paired bootstrap confirms that the gain is significant (+0.112, 95% CI [+0.065, +0.161]). The general multilingual models mBERT and XLM-R perform no better than the TF-IDF baseline. AfroXLMR and XLM-R share an architecture and a tokenizer and differ only in additional African-language pretraining, so their 0.17-point difference isolates the value of that pretraining. Manual analysis of 50 errors shows that about a third involve debatable gold labels, and that most genuine errors lie on the boundary between neutral and opinionated text. The final model is deployed as a Streamlit web application.</p>
+</div>
+
+<h2>2. Introduction</h2>
+<p>Social media is now a primary channel through which people in East Africa discuss politics, public services, sport and commercial products. Much of this discussion happens in Kiswahili, a language spoken across Kenya, Tanzania, Uganda and neighbouring countries and listed among the three African languages with the most speakers (Muhammad et al., 2023a). Organisations that want to monitor public opinion at scale need tools to distinguish complaints from praise and from neutral information. Such organisations include telecom and banking customer-care teams, health ministries running campaigns, and NGOs. Most off-the-shelf sentiment tools are trained on English and do not transfer to Kiswahili. African languages more generally remain severely under-resourced in NLP (Joshi et al., 2020; Nekoto et al., 2020).</p>
+<p>Kiswahili tweets are also a demanding test case for text classification:</p>
+<ul>
+<li><b>Agglutinative morphology.</b> Kiswahili marks subject, tense and object with prefixes (<span class="sw">wa-me-fariki</span>, "they have died"), so one verb root appears in many surface forms.</li>
+<li><b>Non-standard writing.</b> Tweets add non-standard spelling, Sheng slang and words run together.</li>
+<li><b>Code-switching</b> with English.</li>
+<li><b>Very little labelled data.</b> The standard public benchmark for Kiswahili tweet sentiment, AfriSenti, has fewer than 2,000 training examples.</li>
+</ul>
+<p><b>Objective.</b> I set out to build a Kiswahili tweet sentiment classifier that real users can try through a web interface, and to understand <i>why</i> different modelling approaches succeed or fail in this low-resource setting. The project addresses four questions:</p>
+<ol>
+<li>How far do classical TF-IDF models get with 1,810 training tweets?</li>
+<li>Does a recurrent model with pretrained word embeddings improve on them?</li>
+<li>Does pretraining on African languages matter more than general multilingual pretraining?</li>
+<li>Which errors remain, and are they model failures or properties of the data?</li>
+</ol>
+
+<h2>3. Related Work</h2>
+<p><b>Sentiment analysis for African languages.</b> Early sentiment work relied on lexicons and hand-built features and later moved to neural and pretrained models. African languages joined this progression only recently. NaijaSenti released human-annotated Twitter sentiment corpora for Hausa, Igbo, Nigerian Pidgin and Yorùbá (Muhammad et al., 2022). AfriSenti then extended this to more than 110,000 tweets in 14 African languages, including Kiswahili, each annotated by three native speakers (Muhammad et al., 2023a). AfriSenti formed the basis of SemEval-2023 Task 12 (Muhammad et al., 2023b). On Kiswahili, the AfriSenti baselines report accuracies between 57.8% (XLM-R base) and 63.4% (AfroXLMR-large), averaged over five runs, with AfriBERTa-large at 61.5% (Muhammad et al., 2023a, Table 7). That table reports accuracy only. Because the classes are imbalanced, I use macro-F1 as my primary metric and report accuracy alongside it for comparison.</p>
+<p><b>Pretrained language models for African languages.</b> Massively multilingual encoders such as mBERT (Devlin et al., 2019) and XLM-R (Conneau et al., 2020) include Kiswahili, but it makes up a small fraction of their training data. Several Africa-centric models address this:</p>
+<ul>
+<li><b>AfriBERTa</b> was pretrained from scratch on less than 1 GB of text in 11 African languages and was competitive with much larger multilingual models (Ogueji et al., 2021).</li>
+<li><b>AfroXLMR</b> continues the pretraining of XLM-R on 17 African languages through multilingual adaptive fine-tuning, MAFT (Alabi et al., 2022).</li>
+<li><b>SERENGETI</b> covers more than 500 African languages (Adebara et al., 2023).</li>
+<li><b>SwahBERT</b> is a monolingual Kiswahili BERT (Martin et al., 2022).</li>
+</ul>
+<p>Rust et al. (2021) showed that a model's tokenizer quality for a language, measured by <i>fertility</i> (subword tokens per word), partly explains its downstream performance in that language. I measure fertility to test this explanation.</p>
+<p><b>Recurrent models and word embeddings.</b> Before Transformers, the standard neural text classifier was a bidirectional LSTM (Hochreiter &amp; Schmidhuber, 1997; Graves &amp; Schmidhuber, 2005) over pretrained word embeddings, sometimes with attention pooling (Bahdanau et al., 2015). fastText provides subword-aware vectors for 157 languages, including Kiswahili (Bojanowski et al., 2017; Grave et al., 2018).</p>
+<p><b>Existing Kiswahili sentiment systems.</b> To check whether this task is already served, I searched the Hugging Face Hub in October 2026. The search returned eight community-uploaded models for Kiswahili sentiment, each with fewer than 20 downloads in the previous month. None of them comes with a comparison of model families or a public analysis of errors. Research systems from the SemEval shared task focused on leaderboard scores, not on deployable tools.</p>
+<p><b>The gap this work addresses.</b> I found no single study that, on the same Kiswahili data and under one protocol, did all of the following:</p>
+<ol type="a">
+<li>compared classical, recurrent and Transformer models</li>
+<li>controlled for random-seed variance</li>
+<li>isolated the effect of African-language pretraining from the effect of tokenization</li>
+<li>analysed the remaining errors manually</li>
+<li>delivered the resulting model as a usable application</li>
+</ol>
+
+<h2>4. Dataset and Data Preparation</h2>
+<h3>4.1 Source and annotation</h3>
+<p>I used the Kiswahili (<code>swa</code>) subset of AfriSenti (Muhammad et al., 2023a). It is licensed CC BY 4.0, and I downloaded it from the authors' Hugging Face mirror (<code>shmuhammad/AfriSenti-twitter-sentiment</code>). The data was collected before December 2022 with the Twitter API, using location-based and vocabulary-based filtering. Each tweet was labelled by three native speakers following the Simple Sentiment Questionnaire guidelines, and the final label was decided by majority vote. Tweets on which all three annotators disagreed were discarded. The tweets are real, naturally occurring text, and no synthetic data was used anywhere in this project. I kept the official train / validation / test splits so that results are comparable with the benchmark. The mirror contains one tweet fewer per split than the counts in the paper (1,811 / 454 / 749), most likely due to a header or formatting artefact.</p>
+
+<table>
+<thead><tr><th>Split</th><th class="n">Positive</th><th class="n">Neutral</th><th class="n">Negative</th><th class="n">Total</th></tr></thead>
+<tbody>
+<tr><td>Train</td><td class="n">547 (30.2%)</td><td class="n">1,072 (59.2%)</td><td class="n">191 (10.6%)</td><td class="n">1,810</td></tr>
+<tr><td>Validation</td><td class="n">137</td><td class="n">268</td><td class="n">48</td><td class="n">453</td></tr>
+<tr><td>Test</td><td class="n">224</td><td class="n">444</td><td class="n">80</td><td class="n">748</td></tr>
+</tbody>
+</table>
+<p class="caption">Table 1. AfriSenti-Kiswahili split sizes and label distribution. All three splits have the same proportions.</p>
+
+<h3>4.2 Characteristics and quality</h3>
+<p>The exploratory analysis is in notebook 01. Six properties shaped the modelling decisions:</p>
+<ul>
+<li><b>Class imbalance.</b> 59% of tweets are neutral and only 11% negative. A classifier that always predicts "neutral" already scores 59% accuracy, so I use <b>macro-F1</b>, which weights each class equally, as the primary metric.</li>
+<li><b>Short texts.</b> Tweets average 16.9 words (maximum 45). Negative tweets are slightly longer (mean 18.6).</li>
+<li><b>Text already stripped of emojis, punctuation and mentions.</b> The original release replaced @mentions with <code>@user</code> and removed URLs (Muhammad et al., 2023a). The Hugging Face mirror goes further: no tweet contains an emoji, punctuation mark, @mention or hashtag. Emojis and exclamation marks are among the strongest sentiment cues on Twitter, so the model must rely on words alone.</li>
+<li><b>Residual noise.</b> The remaining noise includes HTML-entity leftovers (<code>&amp;gt;&amp;gt;</code> became <code>gtgt</code> in 53 tweets), URL fragments, digits (22% of tweets), letter elongation and inconsistent capitalisation.</li>
+<li><b>Annotation noise.</b> 21 rows are duplicated texts, and 3 identical texts carry <i>conflicting</i> labels. One example is the customer-care template <span class="sw">"Habari tunaomba namba yako DM kwa msaada zaidi"</span>, labelled positive twice and neutral once. AfriSenti does not report inter-annotator agreement for Kiswahili. Leakage between splits is negligible: no test tweet appears in training, and only 3 validation tweets do.</li>
+<li><b>Sparse vocabulary.</b> The training set has 8,820 word types, and 69% of them occur only once. 20.5% of test <i>tokens</i> and 50.9% of test word <i>types</i> never appear in training. This high out-of-vocabulary (OOV) rate follows from the morphology and the informal spelling, and it is the central difficulty for models trained only on this data.</li>
+<li><b>Code-switching.</b> 4.9% of tweets contain common English function words.</li>
+</ul>
+
+<figure class="half"><img src="../results/figures/label_distribution.png" alt="Label distribution per split"><figcaption>Figure 1. Label distribution per split.</figcaption></figure>
+
+<h3>4.3 Preprocessing</h3>
+<p>All cleaning is in <code>src/preprocessing.py</code>. Each step can be switched off so that its effect can be measured:</p>
+<ol>
+<li>remove URL fragments</li>
+<li>lowercase</li>
+<li>remove HTML-entity residue (<code>gt</code>, <code>amp</code>, ...)</li>
+<li>squeeze letter elongation to two characters (<span class="sw">sanaaaa → sanaa</span>), keeping Kiswahili's legitimate double vowels (<span class="sw">saa</span>, <span class="sw">kuu</span>)</li>
+<li>replace numbers with a <code>&lt;num&gt;</code> token</li>
+</ol>
+<p>The Transformer models receive the same cleaning except for steps 2 and 5. Their pretrained vocabularies are cased and contain numbers, and their subword tokenizers handle both. At inference time the web app additionally strips @mentions, hashtags, emojis and punctuation, so that user input matches the form of the training data.</p>
+
+<h2>5. Methodology</h2>
+<p>All models are trained on the training split. Hyperparameters and the best epoch are selected on <b>validation macro-F1</b>, and the test set is used only for reporting. Neural models are trained with three random seeds (13, 42, 2026) and reported as mean ± standard deviation, because with 453 validation and 748 test tweets a single run can vary by several F1 points (Dodge et al., 2020). Every experiment is evaluated by the same function (<code>src/evaluate.py</code>) and logged to <code>results/experiments.csv</code>.</p>
+
+<h3>5.1 Baselines (notebook 02)</h3>
+<p>The <b>majority-class</b> predictor gives the floor. The main baseline is <b>TF-IDF + logistic regression</b>, a strong and interpretable standard for small-data text classification (Salton &amp; Buckley, 1988; Pedregosa et al., 2011). I used sublinear term frequency and tuned two settings on validation: the n-gram range ({1}, {1,2}) and the inverse regularisation strength C ∈ {0.3, 1, 3, 10, 30}. Experiments vary:</p>
+<ul>
+<li><b>preprocessing:</b> raw vs cleaned text</li>
+<li><b>features:</b> word n-grams vs character n-grams within word boundaries (<code>char_wb</code>, lengths 2–5), which let inflected forms of the same root share features</li>
+<li><b>class weighting:</b> balanced vs none</li>
+<li><b>classifier:</b> linear SVM vs multinomial Naive Bayes</li>
+</ul>
+
+<h3>5.2 BiLSTM (notebook 03)</h3>
+<p>Each tweet is mapped to a sequence of word ids (maximum 48), and the model runs as follows:</p>
+<ol>
+<li>a 300-dimensional embedding layer</li>
+<li>embedding dropout (0.5)</li>
+<li>a bidirectional LSTM with 128 units per direction, run over packed sequences so that padding is never processed</li>
+<li>pooling over time (max pooling, or additive attention: a two-layer scorer producing a softmax weight per token)</li>
+<li>dropout</li>
+<li>a linear layer to three classes</li>
+</ol>
+<p>The model has 3.65M trainable parameters, 3.2M of them in the embedding table. Training uses Adam (Kingma &amp; Ba, 2015) with learning rate 10<sup>-3</sup>, batch size 32 and gradient clipping at 1.0. The loss is cross-entropy with class weights <i>n</i>/(3·<i>n</i><sub>c</sub>), which gives positive 1.10, neutral 0.56 and negative 3.16. Early stopping keeps the epoch with the best validation macro-F1, with patience 5 and at most 30 epochs.</p>
+<p>The embeddings are initialised in one of two ways:</p>
+<ul>
+<li><b>Randomly.</b> The vocabulary is the training words only.</li>
+<li><b>With fastText Kiswahili vectors</b> (<code>cc.sw.300</code>; Grave et al., 2018). Here the vocabulary also includes validation and test words that have a fastText vector. This uses no labels.</li>
+</ul>
+<p>Pretrained embeddings are either frozen or fine-tuned. Using the fastText vocabulary reduces test <code>&lt;unk&gt;</code> tokens from 20.5% to 9.1%.</p>
+
+<h3>5.3 Fine-tuned Transformers (notebook 04)</h3>
+<p>Each tweet is split into subword tokens, and a special start token (<code>&lt;s&gt;</code>/<code>[CLS]</code>) is added. The encoder produces a contextual vector per token, and the vector of the first token is passed through a classification head (dense → tanh → linear) to produce three logits. The whole network is fine-tuned end-to-end with the Hugging Face <code>Trainer</code> (Wolf et al., 2020) using AdamW (Loshchilov &amp; Hutter, 2019). Settings were identical across models, so that differences reflect pretraining:</p>
+<ul>
+<li>learning rate 3×10<sup>-5</sup> with linear decay and 10% warm-up</li>
+<li>batch size 16, 5 epochs, weight decay 0.01</li>
+<li>maximum length 128 subword tokens</li>
+<li>mixed precision on a Google Colab T4 GPU</li>
+<li>class-weighted cross-entropy, implemented by overriding <code>compute_loss</code></li>
+<li>the epoch with the best validation macro-F1 is kept</li>
+</ul>
+<p>The four encoders cover two strategies:</p>
+<ul>
+<li><b>General multilingual:</b> mBERT (178M parameters) and XLM-R base (278M)</li>
+<li><b>Africa-centric:</b> AfriBERTa-large (126M) and AfroXLMR base (278M)</li>
+</ul>
+<p>Two ablations were then run on the best encoder:</p>
+<ul>
+<li>removing class weighting (T5)</li>
+<li>freezing the encoder and training only the head (T6; learning rate 10<sup>-3</sup>, 10 epochs)</li>
+</ul>
+
+<h3>5.4 Evaluation</h3>
+<p>I report the following metrics:</p>
+<ul>
+<li>accuracy</li>
+<li>macro precision, recall and F1</li>
+<li>per-class F1</li>
+<li>row-normalised confusion matrices</li>
+</ul>
+<p>To test whether differences between models are real, I use a paired bootstrap over the test set (Koehn, 2004; Dror et al., 2018). The 748 test tweets are resampled 2,000 times, and every model's macro-F1 is recomputed on each resample.</p>
+
+<h2>6. Experiments and Results</h2>
+<table>
+<thead><tr><th>ID</th><th>Model / configuration</th><th class="n">Val macro-F1</th><th class="n">Test macro-F1</th><th class="n">Test acc.</th><th class="n">F1 neg.</th></tr></thead>
+<tbody>
+<tr class="group"><td colspan="6">Baselines</td></tr>
+<tr><td>B0</td><td>Majority class</td><td class="n">0.248</td><td class="n">0.248</td><td class="n">0.594</td><td class="n">0.000</td></tr>
+<tr><td>B1</td><td>Word 1–2-gram TF-IDF + LogReg (C = 10, balanced)</td><td class="n">0.438</td><td class="n">0.474</td><td class="n">0.588</td><td class="n">0.296</td></tr>
+<tr><td>B1a</td><td>B1 on raw (uncleaned) text</td><td class="n">0.433</td><td class="n">0.486</td><td class="n">0.592</td><td class="n">0.325</td></tr>
+<tr><td>B1b</td><td>B1 without class weighting</td><td class="n">0.355</td><td class="n">0.393</td><td class="n">0.590</td><td class="n">0.092</td></tr>
+<tr><td>B2</td><td>Char 2–5-gram TF-IDF + LogReg (C = 1, balanced)</td><td class="n">0.491</td><td class="n">0.456</td><td class="n">0.535</td><td class="n">0.304</td></tr>
+<tr><td>B3</td><td>Word + char TF-IDF + LogReg</td><td class="n">0.449</td><td class="n">0.478</td><td class="n">0.575</td><td class="n">0.310</td></tr>
+<tr><td>B4</td><td>Word TF-IDF + linear SVM</td><td class="n">0.411</td><td class="n">0.443</td><td class="n">0.583</td><td class="n">0.248</td></tr>
+<tr><td>B5</td><td>Word counts + multinomial Naive Bayes</td><td class="n">0.416</td><td class="n">0.435</td><td class="n">0.600</td><td class="n">0.150</td></tr>
+<tr class="group"><td colspan="6">BiLSTM (mean ± std over 3 seeds)</td></tr>
+<tr><td>L1</td><td>Random embeddings, max pooling</td><td class="n">0.412</td><td class="n">0.433 ± 0.020</td><td class="n">0.522</td><td class="n">0.242</td></tr>
+<tr><td>L2</td><td>fastText, frozen</td><td class="n">0.417</td><td class="n">0.444 ± 0.016</td><td class="n">0.524</td><td class="n">0.300</td></tr>
+<tr><td>L3</td><td>fastText, fine-tuned</td><td class="n">0.444</td><td class="n">0.446 ± 0.008</td><td class="n">0.545</td><td class="n">0.277</td></tr>
+<tr><td>L4</td><td>fastText, fine-tuned, attention pooling</td><td class="n">0.435</td><td class="n">0.455 ± 0.010</td><td class="n">0.537</td><td class="n">0.308</td></tr>
+<tr><td>L5</td><td>L3 without class weighting</td><td class="n">0.436</td><td class="n">0.426 ± 0.018</td><td class="n">0.537</td><td class="n">0.220</td></tr>
+<tr class="group"><td colspan="6">Fine-tuned Transformers (mean ± std over 3 seeds)</td></tr>
+<tr><td>T1</td><td>mBERT</td><td class="n">0.431</td><td class="n">0.432 ± 0.020</td><td class="n">0.512</td><td class="n">0.264</td></tr>
+<tr><td>T2</td><td>XLM-R base</td><td class="n">0.371</td><td class="n">0.388 ± 0.149</td><td class="n">0.448</td><td class="n">0.292</td></tr>
+<tr><td>T3</td><td>AfriBERTa-large</td><td class="n">0.528</td><td class="n">0.556 ± 0.013</td><td class="n">0.582</td><td class="n">0.521</td></tr>
+<tr><td>T4</td><td>AfroXLMR base</td><td class="n">0.527</td><td class="n">0.554 ± 0.009</td><td class="n">0.581</td><td class="n">0.525</td></tr>
+<tr class="best"><td>T5</td><td>AfriBERTa-large without class weighting</td><td class="n">0.538</td><td class="n">0.566 ± 0.005</td><td class="n">0.606</td><td class="n">0.526</td></tr>
+<tr><td>T6</td><td>AfriBERTa-large, frozen encoder</td><td class="n">0.525</td><td class="n">0.537 ± 0.007</td><td class="n">0.557</td><td class="n">0.505</td></tr>
+</tbody>
+</table>
+<p class="caption">Table 2. All experiments. For neural models, accuracy and F1 negative are means over seeds. Full per-class results are in <code>results/experiments.csv</code>.</p>
+
+<figure><img src="../results/figures/all_experiments.png" alt="Test macro-F1 of all experiments" style="max-width:60%"><figcaption>Figure 2. Test macro-F1 of all experiments (error bars: std over 3 seeds).</figcaption></figure>
+
+<h3>6.1 Baselines: class weighting matters most, cleaning does not</h3>
+<p>The best linear models reach 0.47–0.49 test macro-F1, about twice the majority-class floor. Accuracy alone is misleading here: the majority baseline (0.594) is <i>more</i> accurate than several real models. Class weighting is the single largest effect. Without it, negative-class F1 collapses to 0.05–0.09 because the classifier almost never predicts the rare class (B1b, B2b), and macro-F1 drops by about 0.08. Cleaning made no measurable difference (B1 vs B1a), which is plausible since the release had already removed emojis, punctuation and mentions. Character n-grams were best on validation (0.491) but not on test (0.456). Differences of a few points are within the noise of a 453-tweet validation set (48 negative examples). This was the first sign that single-run comparisons are unreliable here, and it motivated the use of multiple seeds for the neural models.</p>
+
+<h3>6.2 BiLSTM: a more complex model does not help</h3>
+<p>No BiLSTM configuration beats the TF-IDF baseline. The learning curve (Figure 3) shows why: training loss falls to about 0.06 while validation macro-F1 peaks at epoch 4, which is classic overfitting. Early stopping limits the damage but cannot create information. With 3.65M parameters and 1,810 short tweets, the network memorises the training set. A linear model over sparse features has a much stronger bias suited to small data.</p>
+<p>In these tweets, sentiment is also carried largely by individual words such as <span class="sw">amefariki</span> ("has died") and <span class="sw">asante</span> ("thank you"), not by word order, which is the BiLSTM's advantage.</p>
+<p>fastText initialisation helps modestly. It adds +0.01 macro-F1 (L1 → L3) and halves the variance across seeds (0.020 → 0.008). It cannot do more because only 66% of training word types have a fastText vector: Common Crawl Kiswahili is formal web text, while tweets contain slang and merged words. Freezing or fine-tuning the embeddings makes no difference (0.444 vs 0.446). Attention pooling is the best BiLSTM on test (0.455) but not on validation, again within noise. Inspecting its weights shows attention concentrated on topic and function words (<span class="sw">watu</span> "people", <span class="sw">mwaka</span> "year", numbers) rather than on sentiment words. This is consistent with the finding that attention weights are not faithful explanations (Jain &amp; Wallace, 2019).</p>
+<figure class="half"><img src="../results/figures/bilstm_learning_curve.png" alt="BiLSTM learning curve"><figcaption>Figure 3. BiLSTM (L3, seed 2026): training loss keeps falling while validation macro-F1 peaks at epoch 4.</figcaption></figure>
+
+<h3>6.3 Transformers: African-language pretraining is decisive</h3>
+<p>The two Africa-centric encoders reach about 0.555 macro-F1, roughly 0.07 above the best TF-IDF model and 0.10 above the BiLSTM. They also raise negative-class F1 from about 0.31 to 0.52, so the improvement is concentrated on the hardest class. The two general multilingual models, by contrast, score <i>below</i> the TF-IDF baseline.</p>
+<p>The cleanest comparison is <b>XLM-R vs AfroXLMR</b>. The two have the same architecture, size and tokenizer, and AfroXLMR is XLM-R with additional pretraining on African-language text (Alabi et al., 2022). That additional pretraining alone is worth +0.17 macro-F1 here.</p>
+<p>XLM-R's large standard deviation (0.149) shows that at least one of its three runs failed to train properly. This instability of fine-tuning on small datasets is well documented (Mosbach et al., 2021; Dodge et al., 2020), and it is why seed averaging was necessary.</p>
+
+<table>
+<thead><tr><th>Tokenizer</th><th class="n">Vocabulary</th><th class="n">Fertility</th><th>Tokenization of <span class="sw">wamefariki ajalini</span> ("they died in an accident")</th></tr></thead>
+<tbody>
+<tr><td>mBERT</td><td class="n">119,547</td><td class="n">2.12</td><td><code>wa ##me ##fari ##ki ajal ##ini</code></td></tr>
+<tr><td>XLM-R / AfroXLMR</td><td class="n">250,002</td><td class="n">1.61</td><td><code>▁wame fariki ▁ajal ini</code></td></tr>
+<tr><td>AfriBERTa</td><td class="n">70,006</td><td class="n">1.45</td><td><code>▁wamefariki ▁ajali ni</code></td></tr>
+</tbody>
+</table>
+<p class="caption">Table 3. Tokenizer fertility (subword tokens per word) on all 1,810 training tweets. <code>▁</code> marks the start of a word and <code>##</code> marks a word continuation.</p>
+<p>Tokenization tells part of the story (Table 3). AfriBERTa, with a vocabulary built for African languages, splits Kiswahili least and keeps <span class="sw">wamefariki</span> as a single token, while mBERT fragments it into four pieces. But XLM-R and AfroXLMR have <i>identical</i> fertility and very different scores. Tokenization alone therefore cannot explain the gap; what the encoder learned during pretraining matters more (cf. Rust et al., 2021). AfriBERTa matches AfroXLMR with less than half the parameters, consistent with Ogueji et al. (2021).</p>
+<p>For comparison with published work, my AfriBERTa-large runs reach 58.2% (T3) and 60.6% (T5) accuracy. The AfriSenti paper reports 61.5% for the same model on the same task (Muhammad et al., 2023a, Table 7). Their setup differs in learning rate, batch size and number of epochs, and their version of the text keeps emojis and punctuation.</p>
+<p><b>Ablations.</b> Without class weighting, AfriBERTa performs as well or slightly better (T5: 0.566 ± 0.005 vs T3: 0.556 ± 0.013), with identical negative-class F1. Unlike for TF-IDF, where removing weights cost 0.08, the pretrained representations already separate the rare class. T5 has the best validation score, so it is the configuration I deployed. With the encoder <i>frozen</i> (T6), AfriBERTa still reaches 0.537 and beats every non-Transformer model. Most of the gain therefore comes from the pretrained representations themselves, with full fine-tuning adding a further 0.02–0.03.</p>
+<p><b>Statistical significance.</b> The deployed model (T5, seed 42; test macro-F1 0.568, accuracy 0.623) was compared with the best TF-IDF model and the best BiLSTM using the paired bootstrap:</p>
+<table>
+<thead><tr><th>Comparison</th><th class="n">Mean Δ macro-F1</th><th class="n">95% CI</th><th class="n">P(Δ ≤ 0)</th></tr></thead>
+<tbody>
+<tr><td>Transformer − TF-IDF</td><td class="n">+0.112</td><td class="n">[+0.065, +0.161]</td><td class="n">&lt; 0.001</td></tr>
+<tr><td>Transformer − BiLSTM</td><td class="n">+0.112</td><td class="n">[+0.065, +0.160]</td><td class="n">&lt; 0.001</td></tr>
+<tr><td>BiLSTM − TF-IDF</td><td class="n">−0.001</td><td class="n">[−0.042, +0.041]</td><td class="n">0.52</td></tr>
+</tbody>
+</table>
+<p>The Transformer's lead is clearly significant, while the BiLSTM and TF-IDF models are statistically indistinguishable. The TF-IDF comparison uses the B2 model, which was selected on validation.</p>
+
+<h2>7. Error Analysis and Discussion</h2>
+<h3>7.1 Quantitative patterns</h3>
+<figure class="half"><img src="../results/figures/cm_best_transformer.png" alt="Confusion matrix of the deployed model"><figcaption>Figure 4. Row-normalised confusion matrix of the deployed model on the test set.</figcaption></figure>
+<p><b>The model rarely confuses positive with negative.</b> Only 3.5% of its 282 test errors are positive ↔ negative flips (Figure 4). The other 96.5% involve the neutral class:</p>
+<ul>
+<li>positive predicted as neutral: 40%</li>
+<li>neutral predicted as positive: 35%</li>
+<li>negative predicted as neutral: 14%</li>
+<li>neutral predicted as negative: 7%</li>
+</ul>
+<p>The model usually gets the <i>direction</i> of sentiment right. What it struggles with is <i>whether</i> a tweet expresses sentiment at all. Half of all negative tweets are predicted neutral, which explains the remaining weakness on that class.</p>
+<p><b>Pretraining removes the vocabulary problem.</b> Grouping test tweets by the share of their words unseen in training (Figure 5), the BiLSTM's accuracy drops from 0.55 to 0.47 when more than 25% of words are OOV. The Transformer stays flat (0.63 / 0.61 / 0.63). This directly confirms the hypothesis from the data analysis: the BiLSTM's bottleneck was lexical coverage, and subword pretraining supplies it.</p>
+<p><b>Other patterns.</b> Longer tweets are harder for every model (Transformer: 0.69 accuracy for ≤ 10 words vs 0.60–0.61 for longer ones). 166 test tweets (22%) are misclassified by all three model families.</p>
+<figure class="half"><img src="../results/figures/accuracy_vs_oov.png" alt="Accuracy by OOV rate"><figcaption>Figure 5. Accuracy by the share of a tweet's words that are unseen in training.</figcaption></figure>
+
+<h3>7.2 Manual analysis of 50 errors</h3>
+<p>I drew a random sample of 50 test errors of the deployed model, read each one, and assigned it to one category (<code>results/error_sample.csv</code> gives a gloss and reason for every tweet).</p>
+<table>
+<thead><tr><th>Category</th><th class="n">n</th><th>Example (gold → predicted)</th></tr></thead>
+<tbody>
+<tr><td>Debatable or wrong gold label</td><td class="n">17</td><td><span class="sw">"Leo Oktoba 3 ndio siku ya uteuzi wa Waandikishaji wa Wapiga kura"</span> ("today is the day voter registrars are appointed"), positive → neutral; customer-care templates and adverts labelled positive in some tweets and neutral in others</td></tr>
+<tr><td>Clear model error</td><td class="n">11</td><td><span class="sw">"Nzuri Sana"</span> ("very good"), positive → neutral; <span class="sw">"...ufundishaji mbovu mazingira duni..."</span> ("poor teaching, poor environment"), negative → neutral; a weather forecast, neutral → positive</td></tr>
+<tr><td>News vs opinion</td><td class="n">9</td><td><span class="sw">"Klabu ya Simba imetozwa faini ya milioni tatu..."</span> ("Simba club has been fined three million"), negative → neutral; <span class="sw">"Museveni aliwahi kushikiliwa katika Gereza la Ukonga..."</span> ("Museveni was once held in Ukonga prison"), neutral → negative</td></tr>
+<tr><td>Missing context</td><td class="n">5</td><td><span class="sw">"Machungu boss Wangu"</span> ("bitterness, my boss"), a reply without its thread; <span class="sw">"Naomba tutumie hashtags hizi"</span> ("let's use these hashtags"), whose hashtags were stripped</td></tr>
+<tr><td>Slang / spelling</td><td class="n">4</td><td>Sheng and run-together words with 50% OOV</td></tr>
+<tr><td>Mixed sentiment</td><td class="n">2</td><td><span class="sw">"Huwa inauma aisee... But lengo ni ufurahi"</span> ("it hurts... but the goal is to be happy")</td></tr>
+<tr><td>Code-switching</td><td class="n">2</td><td><span class="sw">"What a joy Nahodha wa Taifa Stars..."</span>: the sentiment is in the English words</td></tr>
+</tbody>
+</table>
+<p class="caption">Table 4. Manual categorisation of 50 randomly sampled errors of the deployed model.</p>
+
+<h3>7.3 Discussion</h3>
+<p><b>The data limits the achievable score.</b> About a third of the sampled errors involve gold labels that are debatable or wrong. Most are formulaic customer-care replies, adverts, and informational tweets labelled positive. This matches the conflicting duplicate labels found during data exploration and Prabhakaran et al.'s observation, cited by Muhammad et al. (2023a), that majority voting conceals systematic annotator disagreement. The true quality of the model is therefore somewhat better than 0.568 macro-F1 suggests. The absence of a published agreement score for Kiswahili makes the ceiling hard to quantify.</p>
+<p><b>The hardest boundary is conceptual.</b> Many genuine errors are tweets that <i>report</i> an event with emotional content (a fine, a death, a prison term, an electricity connection) without the author expressing an opinion. Annotators sometimes labelled these by the event's valence and sometimes as neutral. The model has learned topic words such as <span class="sw">gereza</span> ("prison") and <span class="sw">amefariki</span> ("has died") as sentiment cues, which helps on some tweets and hurts on others. The live demo exposed a related, practical weakness: clear complaints such as <span class="sw">"Huduma yenu ni mbaya sana..."</span> ("your service is very bad") are predicted neutral. A plausible reason is that customer-service tweets in the training data are mostly polite company replies, so direct customer complaints are under-represented.</p>
+<p><b>What pretraining did and did not solve.</b> Slang, spelling variation and code-switching account for only 6 of the 50 errors once an Africa-centric Transformer is used. Together with the flat accuracy across OOV levels, this suggests that the vocabulary problem which limited the TF-IDF and BiLSTM models is largely solved by pretraining. The remaining errors are mostly about meaning and annotation, which more model capacity alone is unlikely to fix.</p>
+
+<h2>8. Deployment</h2>
+<p>The deployed model is published on the Hugging Face Hub (<code>RubaxTyra/kiswahili-sentiment</code>) together with a model card and the experiment results. The web application (<code>app/streamlit_app.py</code>) is built with Streamlit and hosted free on Streamlit Community Cloud at <a href="https://kiswahili-sentiment.streamlit.app/">kiswahili-sentiment.streamlit.app</a>. Each request goes through five steps:</p>
+<ol>
+<li>The user enters Kiswahili text or picks an example.</li>
+<li>The text is cleaned exactly as in training, plus removal of mentions, hashtags, emojis and punctuation (<code>app/predict.py</code>).</li>
+<li>The text is tokenised with the AfriBERTa tokenizer.</li>
+<li>The fine-tuned model produces three logits, and a softmax turns them into probabilities.</li>
+<li>The app displays the predicted class, a probability bar for each class, the cleaned model input, and a low-confidence warning when the top probability is below 0.5.</li>
+</ol>
+<p>The model is downloaded from the Hub on first start and cached in memory (<code>st.cache_resource</code>). A Gradio version of the same interface (<code>app/app.py</code>) shares the prediction code and can be run locally.</p>
+<p>The original plan was to host the Gradio app on Hugging Face Spaces. The deployment step returned HTTP 402 (Payment Required): Gradio Spaces now require a paid subscription, so I moved the interface to Streamlit Community Cloud and kept the model on the Hub. Free Streamlit apps sleep after a period of inactivity, so the first visit may take about a minute to wake the app.</p>
+
+<h2>9. Limitations and Future Work</h2>
+<ul>
+<li><b>Data.</b> With 1,810 training tweets, all models are data-limited. The released text has emojis and punctuation removed, which deletes strong sentiment cues. Label noise is substantial, and the data was collected from Twitter before December 2022 using East African locations and vocabulary, so it may not reflect current language use or other domains such as customer reviews or SMS.</li>
+<li><b>Model selection.</b> I tuned hyperparameters per model for the linear baselines but used one shared configuration for all Transformers; per-model tuning might change the ranking, especially for XLM-R. The no-class-weight ablation (T5) was selected after observing T1–T4 on validation. Larger models (AfroXLMR-large) were not run because of compute limits on a free GPU.</li>
+<li><b>Evaluation.</b> The manual error analysis was carried out by a single reader, and several tweets could fit more than one category. The test set is small: the 95% confidence interval for the deployed model's macro-F1 is [0.521, 0.609].</li>
+<li><b>System.</b> The deployed app runs on CPU on free hosting. It handles one text at a time and ignores emojis entered by users.</li>
+</ul>
+<p><b>Future work.</b> With more time and resources I would:</p>
+<ol>
+<li>re-collect or request the original tweets with emojis, and add customer-complaint data</li>
+<li>re-annotate the neutral/opinion boundary with explicit guidelines and report agreement</li>
+<li>try larger or domain-adapted models (AfroXLMR-large, SwahBERT, or further pretraining on Kiswahili tweets)</li>
+<li>use the individual annotator labels that AfriSenti releases to train with soft labels</li>
+<li>add batch upload and explanations to the app</li>
+</ol>
+
+<h2>10. Conclusion</h2>
+<p>For Kiswahili tweet sentiment with under 2,000 labelled examples, the decisive factor was not the architecture but <i>what the model already knew about the language</i>:</p>
+<ul>
+<li>A tuned TF-IDF model is a strong baseline.</li>
+<li>A BiLSTM, though more complex, overfits and does not improve on it.</li>
+<li>General multilingual Transformers do not help either.</li>
+<li>Encoders pretrained on African languages (AfriBERTa, AfroXLMR) give a large and statistically significant improvement, especially on the rare negative class. The XLM-R vs AfroXLMR comparison shows that this comes from pretraining data rather than tokenization.</li>
+</ul>
+<p>Error analysis showed that the remaining errors concern the boundary between neutral reporting and expressed opinion, together with a sizeable share of questionable gold labels. Progress on this task is therefore likely to come as much from better data and clearer annotation as from better models.</p>
+<p>Three methodological lessons came out of the project. First, macro-F1 and seed averaging were necessary to avoid drawing conclusions from noise. Second, a more complex model must earn its place against a strong simple baseline. Third, reading the errors in the original language revealed problems with the data that the scores alone did not show.</p>
+
+<h2>11. References</h2>
+<div class="refs">
+<p>Adebara, I., Elmadany, A., Abdul-Mageed, M., &amp; Alcoba Inciarte, A. (2023). SERENGETI: Massively multilingual language models for Africa. In <i>Findings of the Association for Computational Linguistics: ACL 2023</i> (pp. 1498–1537). https://aclanthology.org/2023.findings-acl.97</p>
+<p>Alabi, J. O., Adelani, D. I., Mosbach, M., &amp; Klakow, D. (2022). Adapting pre-trained language models to African languages via multilingual adaptive fine-tuning. In <i>Proceedings of COLING 2022</i> (pp. 4336–4349). https://aclanthology.org/2022.coling-1.382</p>
+<p>Bahdanau, D., Cho, K., &amp; Bengio, Y. (2015). Neural machine translation by jointly learning to align and translate. In <i>International Conference on Learning Representations (ICLR)</i>.</p>
+<p>Bojanowski, P., Grave, E., Joulin, A., &amp; Mikolov, T. (2017). Enriching word vectors with subword information. <i>Transactions of the Association for Computational Linguistics, 5</i>, 135–146.</p>
+<p>Conneau, A., Khandelwal, K., Goyal, N., Chaudhary, V., Wenzek, G., Guzmán, F., Grave, E., Ott, M., Zettlemoyer, L., &amp; Stoyanov, V. (2020). Unsupervised cross-lingual representation learning at scale. In <i>Proceedings of ACL 2020</i> (pp. 8440–8451). https://aclanthology.org/2020.acl-main.747</p>
+<p>Devlin, J., Chang, M.-W., Lee, K., &amp; Toutanova, K. (2019). BERT: Pre-training of deep bidirectional transformers for language understanding. In <i>Proceedings of NAACL-HLT 2019</i> (pp. 4171–4186). https://aclanthology.org/N19-1423</p>
+<p>Dodge, J., Ilharco, G., Schwartz, R., Farhadi, A., Hajishirzi, H., &amp; Smith, N. (2020). Fine-tuning pretrained language models: Weight initializations, data orders, and early stopping. <i>arXiv:2002.06305</i>.</p>
+<p>Dror, R., Baumer, G., Shlomov, S., &amp; Reichart, R. (2018). The hitchhiker's guide to testing statistical significance in natural language processing. In <i>Proceedings of ACL 2018</i> (pp. 1383–1392). https://aclanthology.org/P18-1128</p>
+<p>Grave, E., Bojanowski, P., Gupta, P., Joulin, A., &amp; Mikolov, T. (2018). Learning word vectors for 157 languages. In <i>Proceedings of LREC 2018</i>.</p>
+<p>Graves, A., &amp; Schmidhuber, J. (2005). Framewise phoneme classification with bidirectional LSTM and other neural network architectures. <i>Neural Networks, 18</i>(5–6), 602–610.</p>
+<p>Hochreiter, S., &amp; Schmidhuber, J. (1997). Long short-term memory. <i>Neural Computation, 9</i>(8), 1735–1780.</p>
+<p>Jain, S., &amp; Wallace, B. C. (2019). Attention is not explanation. In <i>Proceedings of NAACL-HLT 2019</i> (pp. 3543–3556). https://aclanthology.org/N19-1357</p>
+<p>Joshi, P., Santy, S., Budhiraja, A., Bali, K., &amp; Choudhury, M. (2020). The state and fate of linguistic diversity and inclusion in the NLP world. In <i>Proceedings of ACL 2020</i> (pp. 6282–6293). https://aclanthology.org/2020.acl-main.560</p>
+<p>Kingma, D. P., &amp; Ba, J. (2015). Adam: A method for stochastic optimization. In <i>International Conference on Learning Representations (ICLR)</i>.</p>
+<p>Koehn, P. (2004). Statistical significance tests for machine translation evaluation. In <i>Proceedings of EMNLP 2004</i> (pp. 388–395). https://aclanthology.org/W04-3250</p>
+<p>Loshchilov, I., &amp; Hutter, F. (2019). Decoupled weight decay regularization. In <i>International Conference on Learning Representations (ICLR)</i>.</p>
+<p>Martin, G. L., Mswahili, M. E., &amp; Jeong, Y.-S. (2022). SwahBERT: Language model of Swahili. In <i>Proceedings of NAACL-HLT 2022</i> (pp. 303–313). https://aclanthology.org/2022.naacl-main.23</p>
+<p>Mosbach, M., Andriushchenko, M., &amp; Klakow, D. (2021). On the stability of fine-tuning BERT: Misconceptions, explanations, and strong baselines. In <i>International Conference on Learning Representations (ICLR)</i>.</p>
+<p>Muhammad, S. H., Adelani, D. I., Ruder, S., Ahmad, I. S., Abdulmumin, I., Bello, B. S., et al. (2022). NaijaSenti: A Nigerian Twitter sentiment corpus for multilingual sentiment analysis. In <i>Proceedings of LREC 2022</i> (pp. 590–602). https://aclanthology.org/2022.lrec-1.63</p>
+<p>Muhammad, S. H., Abdulmumin, I., Ayele, A. A., Ousidhoum, N., Adelani, D. I., Yimam, S. M., et al. (2023a). AfriSenti: A Twitter sentiment analysis benchmark for African languages. In <i>Proceedings of EMNLP 2023</i> (pp. 13968–13981). https://aclanthology.org/2023.emnlp-main.862. Dataset: https://huggingface.co/datasets/shmuhammad/AfriSenti-twitter-sentiment (CC BY 4.0).</p>
+<p>Muhammad, S. H., Abdulmumin, I., Yimam, S. M., Adelani, D. I., Ahmad, I. S., Ousidhoum, N., et al. (2023b). SemEval-2023 Task 12: Sentiment analysis for African languages (AfriSenti-SemEval). In <i>Proceedings of SemEval-2023</i> (pp. 2319–2337). https://aclanthology.org/2023.semeval-1.315</p>
+<p>Nekoto, W., Marivate, V., Matsila, T., Fasubaa, T., Kolawole, T., Fagbohungbe, T., et al. (2020). Participatory research for low-resourced machine translation: A case study in African languages. In <i>Findings of the Association for Computational Linguistics: EMNLP 2020</i> (pp. 2144–2160). https://aclanthology.org/2020.findings-emnlp.195</p>
+<p>Ogueji, K., Zhu, Y., &amp; Lin, J. (2021). Small data? No problem! Exploring the viability of pretrained multilingual language models for low-resourced languages. In <i>Proceedings of the 1st Workshop on Multilingual Representation Learning</i> (pp. 116–126). https://aclanthology.org/2021.mrl-1.11</p>
+<p>Paszke, A., Gross, S., Massa, F., Lerer, A., Bradbury, J., Chanan, G., et al. (2019). PyTorch: An imperative style, high-performance deep learning library. In <i>Advances in Neural Information Processing Systems 32</i>.</p>
+<p>Pedregosa, F., Varoquaux, G., Gramfort, A., Michel, V., Thirion, B., Grisel, O., et al. (2011). Scikit-learn: Machine learning in Python. <i>Journal of Machine Learning Research, 12</i>, 2825–2830.</p>
+<p>Rust, P., Pfeiffer, J., Vulić, I., Ruder, S., &amp; Gurevych, I. (2021). How good is your tokenizer? On the monolingual performance of multilingual language models. In <i>Proceedings of ACL-IJCNLP 2021</i> (pp. 3118–3135). https://aclanthology.org/2021.acl-long.243</p>
+<p>Salton, G., &amp; Buckley, C. (1988). Term-weighting approaches in automatic text retrieval. <i>Information Processing &amp; Management, 24</i>(5), 513–523.</p>
+<p>Streamlit Inc. (2026). <i>Streamlit Community Cloud</i> [Software platform]. https://streamlit.io/cloud</p>
+<p>Wolf, T., Debut, L., Sanh, V., Chaumond, J., Delangue, C., Moi, A., et al. (2020). Transformers: State-of-the-art natural language processing. In <i>Proceedings of EMNLP 2020: System Demonstrations</i> (pp. 38–45). https://aclanthology.org/2020.emnlp-demos.6</p>
+<p><b>Models used:</b> <code>castorini/afriberta_large</code>, <code>Davlan/afro-xlmr-base</code>, <code>FacebookAI/xlm-roberta-base</code>, <code>google-bert/bert-base-multilingual-cased</code> (Hugging Face Hub); fastText <code>cc.sw.300</code> vectors (https://fasttext.cc/docs/en/crawl-vectors.html).</p>
+</div>
+
+</body>
+</html>
