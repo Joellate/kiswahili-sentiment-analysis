@@ -48,6 +48,19 @@ Key properties, all explored in `notebooks/01_data_exploration.ipynb`:
 
 All models are selected on validation macro-F1. The neural models are run with 3 random seeds and reported as mean ± std.
 
+## Existing resources vs. my own work
+
+| Used (existing) | Implemented in this project |
+|---|---|
+| AfriSenti Kiswahili dataset with labels and splits (Muhammad et al., 2023) | Data loading and caching, plus the analysis of duplicates, leakage, noise and OOV (`src/data.py`, notebook 01) |
+| Pretrained checkpoints: mBERT, XLM-R, AfriBERTa-large, AfroXLMR; fastText `cc.sw.300` vectors | Preprocessing, with each step switchable (`src/preprocessing.py`) |
+| Libraries: scikit-learn, PyTorch, Hugging Face Transformers, Streamlit | Shared evaluation, experiment logging and seed averaging (`src/evaluate.py`) |
+| Compute and hosting: Google Colab T4, Hugging Face Hub, Streamlit Community Cloud | TF-IDF experiment grid and ablations (notebook 02) |
+| | BiLSTM in PyTorch: packing, max/attention pooling, fastText vocabulary extension, early stopping (notebook 03) |
+| | Class-weighted `Trainer`, fine-tuning protocol for 4 encoders plus ablations, tokenizer fertility (notebook 04) |
+| | Paired bootstrap test, OOV and length analyses, manual analysis of 50 errors (notebook 05) |
+| | Prediction module, Streamlit app and deployment (`app/`) |
+
 ## Repository layout
 
 ```

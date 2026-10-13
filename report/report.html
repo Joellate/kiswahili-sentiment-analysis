@@ -204,6 +204,21 @@
 </ul>
 <p>To test whether differences between models are real, I use a paired bootstrap over the test set (Koehn, 2004; Dror et al., 2018). The 748 test tweets are resampled 2,000 times, and every model's macro-F1 is recomputed on each resample.</p>
 
+<h3>5.5 Existing resources used vs. my own implementation</h3>
+<table>
+<thead><tr><th>Existing resources used</th><th>Implemented in this project</th></tr></thead>
+<tbody>
+<tr><td><b>Data:</b> the AfriSenti Kiswahili dataset, with its labels and official splits (Muhammad et al., 2023a).</td><td>The data loader with caching, plus the analysis of duplicates, leakage, conflicting labels, noise, OOV rate and code-switching (notebook 01).</td></tr>
+<tr><td><b>Pretrained models:</b> the mBERT, XLM-R, AfriBERTa-large and AfroXLMR checkpoints from the Hugging Face Hub, and the fastText <code>cc.sw.300</code> vectors.</td><td>The preprocessing module, in which each step can be switched off and letter elongation is shortened without removing Kiswahili's double vowels (<code>src/preprocessing.py</code>).</td></tr>
+<tr><td><b>Libraries:</b> scikit-learn (TF-IDF, linear models), PyTorch (LSTM layers, optimiser), Hugging Face Transformers (tokenizers, <code>Trainer</code>), Streamlit.</td><td>The shared evaluation and experiment-logging code, including averaging over seeds (<code>src/evaluate.py</code>).</td></tr>
+<tr><td><b>Compute and hosting:</b> a Google Colab T4 GPU, the Hugging Face Hub (model hosting) and Streamlit Community Cloud (app hosting).</td><td>The TF-IDF experiment grid and its ablations, and the BiLSTM classifier: architecture, packing, max and attention pooling, fastText vocabulary extension, and a training loop with early stopping.</td></tr>
+<tr><td></td><td>The class-weighted <code>Trainer</code> subclass and the fine-tuning protocol for four encoders and two ablations, together with the tokenizer-fertility measurements.</td></tr>
+<tr><td></td><td>The paired bootstrap test, the analyses by OOV rate and tweet length, and the manual categorisation of 50 errors (notebook 05).</td></tr>
+<tr><td></td><td>The prediction module and the Streamlit web application (<code>app/</code>), and the deployment.</td></tr>
+</tbody>
+</table>
+<p class="caption">Table 2. Existing resources that were used, and the work implemented for this project.</p>
+
 <h2>6. Experiments and Results</h2>
 <table>
 <thead><tr><th>ID</th><th>Model / configuration</th><th class="n">Val macro-F1</th><th class="n">Test macro-F1</th><th class="n">Test acc.</th><th class="n">F1 neg.</th></tr></thead>
@@ -232,7 +247,7 @@
 <tr><td>T6</td><td>AfriBERTa-large, frozen encoder</td><td class="n">0.525</td><td class="n">0.537 ± 0.007</td><td class="n">0.557</td><td class="n">0.505</td></tr>
 </tbody>
 </table>
-<p class="caption">Table 2. All experiments. For neural models, accuracy and F1 negative are means over seeds. Full per-class results are in <code>results/experiments.csv</code>.</p>
+<p class="caption">Table 3. All experiments. For neural models, accuracy and F1 negative are means over seeds. Full per-class results are in <code>results/experiments.csv</code>.</p>
 
 <figure><img src="../results/figures/all_experiments.png" alt="Test macro-F1 of all experiments" style="max-width:60%"><figcaption>Figure 2. Test macro-F1 of all experiments (error bars: std over 3 seeds).</figcaption></figure>
 
@@ -258,8 +273,8 @@
 <tr><td>AfriBERTa</td><td class="n">70,006</td><td class="n">1.45</td><td><code>▁wamefariki ▁ajali ni</code></td></tr>
 </tbody>
 </table>
-<p class="caption">Table 3. Tokenizer fertility (subword tokens per word) on all 1,810 training tweets. <code>▁</code> marks the start of a word and <code>##</code> marks a word continuation.</p>
-<p>Tokenization tells part of the story (Table 3). AfriBERTa, with a vocabulary built for African languages, splits Kiswahili least and keeps <span class="sw">wamefariki</span> as a single token, while mBERT fragments it into four pieces. But XLM-R and AfroXLMR have <i>identical</i> fertility and very different scores. Tokenization alone therefore cannot explain the gap; what the encoder learned during pretraining matters more (cf. Rust et al., 2021). AfriBERTa matches AfroXLMR with less than half the parameters, consistent with Ogueji et al. (2021).</p>
+<p class="caption">Table 4. Tokenizer fertility (subword tokens per word) on all 1,810 training tweets. <code>▁</code> marks the start of a word and <code>##</code> marks a word continuation.</p>
+<p>Tokenization tells part of the story (Table 4). AfriBERTa, with a vocabulary built for African languages, splits Kiswahili least and keeps <span class="sw">wamefariki</span> as a single token, while mBERT fragments it into four pieces. But XLM-R and AfroXLMR have <i>identical</i> fertility and very different scores. Tokenization alone therefore cannot explain the gap; what the encoder learned during pretraining matters more (cf. Rust et al., 2021). AfriBERTa matches AfroXLMR with less than half the parameters, consistent with Ogueji et al. (2021).</p>
 <p>For comparison with published work, my AfriBERTa-large runs reach 58.2% (T3) and 60.6% (T5) accuracy. The AfriSenti paper reports 61.5% for the same model on the same task (Muhammad et al., 2023a, Table 7). Their setup differs in learning rate, batch size and number of epochs, and their version of the text keeps emojis and punctuation.</p>
 <p><b>Ablations.</b> Without class weighting, AfriBERTa performs as well or slightly better (T5: 0.566 ± 0.005 vs T3: 0.556 ± 0.013), with identical negative-class F1. Unlike for TF-IDF, where removing weights cost 0.08, the pretrained representations already separate the rare class. T5 has the best validation score, so it is the configuration I deployed. With the encoder <i>frozen</i> (T6), AfriBERTa still reaches 0.537 and beats every non-Transformer model. Most of the gain therefore comes from the pretrained representations themselves, with full fine-tuning adding a further 0.02–0.03.</p>
 <p><b>Statistical significance.</b> The deployed model (T5, seed 42; test macro-F1 0.568, accuracy 0.623) was compared with the best TF-IDF model and the best BiLSTM using the paired bootstrap:</p>
@@ -302,7 +317,7 @@
 <tr><td>Code-switching</td><td class="n">2</td><td><span class="sw">"What a joy Nahodha wa Taifa Stars..."</span>: the sentiment is in the English words</td></tr>
 </tbody>
 </table>
-<p class="caption">Table 4. Manual categorisation of 50 randomly sampled errors of the deployed model.</p>
+<p class="caption">Table 5. Manual categorisation of 50 randomly sampled errors of the deployed model.</p>
 
 <h3>7.3 Discussion</h3>
 <p><b>The data limits the achievable score.</b> About a third of the sampled errors involve gold labels that are debatable or wrong. Most are formulaic customer-care replies, adverts, and informational tweets labelled positive. This matches the conflicting duplicate labels found during data exploration and Prabhakaran et al.'s observation, cited by Muhammad et al. (2023a), that majority voting conceals systematic annotator disagreement. The true quality of the model is therefore somewhat better than 0.568 macro-F1 suggests. The absence of a published agreement score for Kiswahili makes the ceiling hard to quantify.</p>
